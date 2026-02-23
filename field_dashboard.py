@@ -230,26 +230,51 @@ def tab_fleet_status():
     st.markdown("<div class='jal-divider'></div>",unsafe_allow_html=True)
 
     for tk in FLEET:
-        sc = fleet_color(tk["status"])
+        sc         = fleet_color(tk["status"])
         fuel_color = RED_CRIT if tk["fuel"]<30 else YELLOW_W if tk["fuel"]<60 else GREEN_OK
 
-        st.markdown(f"""<div class='fleet-card' style='border-left-color:{sc};'>
-            <div style='display:flex;justify-content:space-between;align-items:flex-start;'>
-                <div>
-                    <div style='font-size:1.05rem;font-weight:700;color:{BROWN};'>🚛 Tanker {tk['id']}
-                        <span style='background:{sc}22;color:{sc};border:1px solid {sc};border-radius:20px;padding:0.15rem 0.6rem;font-size:0.78rem;font-weight:600;margin-left:0.5rem;'>{tk['status']}</span>
-                    </div>
-                    <div style='font-size:0.82rem;color:{MUTED};margin-top:0.3rem;'>
-                        Capacity: {tk['cap']} &nbsp;|&nbsp; Driver: {tk['driver']}
-                    </div>
-                    {'<div style="font-size:0.82rem;color:'+BROWN+';margin-top:0.2rem;">📍 Assigned: '+tk['village']+' &nbsp;|&nbsp; ETA: '+tk['eta']+'</div>' if tk['village']!='—' else ''}
+        # Build assignment line
+        if tk["village"] != "—":
+            assign_html = f"<div style='font-size:0.82rem;color:{BROWN};margin-top:0.2rem;'>📍 Assigned: {tk['village']} &nbsp;|&nbsp; ETA: {tk['eta']}</div>"
+        else:
+            assign_html = ""
+
+        # Build fuel gauge OR workshop notice (no nested ternary in f-string)
+        if tk["fuel"] > 0:
+            right_html = f"""<div style='font-size:0.78rem;color:{MUTED};margin-bottom:3px;'>Fuel</div>
+                <div style='background:{SAND_DARK};border-radius:20px;height:8px;width:80px;overflow:hidden;'>
+                    <div style='background:{fuel_color};width:{tk["fuel"]}%;height:100%;border-radius:20px;'></div>
                 </div>
-                <div style='text-align:right;'>
-                    {'<div style="font-size:0.78rem;color:'+MUTED+';margin-bottom:3px;">Fuel</div><div style="background:'+SAND_DARK+';border-radius:20px;height:8px;width:80px;overflow:hidden;"><div style="background:'+fuel_color+';width:'+str(tk["fuel"])+'%;height:100%;border-radius:20px;"></div></div><div style="font-size:0.75rem;color:'+MUTED+';text-align:right;">'+str(tk["fuel"])+'%</div>' if tk["fuel"]>0 else '<div style="font-size:0.78rem;color:'+RED_CRIT+';">🔧 In Workshop</div>'}
+                <div style='font-size:0.75rem;color:{MUTED};text-align:right;'>{tk["fuel"]}%</div>"""
+        else:
+            right_html = f"<div style='font-size:0.78rem;color:{RED_CRIT};font-weight:600;'>🔧 In Workshop</div>"
+
+        # Build journey progress bar (only for In Transit)
+        if tk["status"] == "In Transit":
+            progress_pct  = max(0, 100 - int(tk["km_left"] / 0.38))
+            progress_html = f"""<div style='margin-top:0.8rem;'>
+                <div style='background:{SAND_DARK};border-radius:20px;height:8px;overflow:hidden;'>
+                    <div style='background:linear-gradient(90deg,{AMBER},{TERRA});width:{progress_pct}%;height:100%;border-radius:20px;'></div>
                 </div>
-            </div>
-            {'<div style="margin-top:0.8rem;"><div style="background:'+SAND_DARK+';border-radius:20px;height:8px;overflow:hidden;"><div style="background:linear-gradient(90deg,'+AMBER+','+TERRA+');width:'+str(max(0,100-int(tk["km_left"]/0.38)))+'%;height:100%;border-radius:20px;"></div></div><div style="font-size:0.77rem;color:'+MUTED+';margin-top:3px;">'+str(tk["km_left"])+' km remaining to destination</div></div>' if tk["status"]=="In Transit" else ''}
-        </div>""",unsafe_allow_html=True)
+                <div style='font-size:0.77rem;color:{MUTED};margin-top:3px;'>{tk["km_left"]} km remaining to destination</div>
+            </div>"""
+        else:
+            progress_html = ""
+
+        card_html = (
+            f"<div class='fleet-card' style='border-left-color:{sc};'>"
+            f"<div style='display:flex;justify-content:space-between;align-items:flex-start;'>"
+            f"<div>"
+            f"<div style='font-size:1.05rem;font-weight:700;color:{BROWN};'>🚛 Tanker {tk['id']} <span style='background:{sc}22;color:{sc};border:1px solid {sc};border-radius:20px;padding:0.15rem 0.6rem;font-size:0.78rem;font-weight:600;margin-left:0.5rem;'>{tk['status']}</span></div>"
+            f"<div style='font-size:0.82rem;color:{MUTED};margin-top:0.3rem;'>Capacity: {tk['cap']} &nbsp;|&nbsp; Driver: {tk['driver']}</div>"
+            f"{assign_html}"
+            f"</div>"
+            f"<div style='text-align:right;'>{right_html}</div>"
+            f"</div>"
+            f"{progress_html}"
+            f"</div>"
+        )
+        st.markdown(card_html, unsafe_allow_html=True)
 
 # ── TAB 3: DELIVERY OTP ───────────────────────────────────────────────────────
 
